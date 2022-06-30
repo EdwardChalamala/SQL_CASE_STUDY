@@ -1,0 +1,75 @@
+use mavenmovies ;
+1. My partner and I want to come by each of the stores in person and meet the managers. 
+Please send over the managers’ names at each store, with the full address of each property 
+(street address, district, city, and country please).
+Ans:
+select  t.Store_ID,s.First_Name,s.Last_Name,a.Address,a.District,c.City,o.Country from staff s
+left join store t on s.staff_id = t.manager_staff_id
+left join address a on t.address_id = a.address_id
+left join city c on a.city_id = c.city_id
+left join country o on c.country_id = o.country_id;
+
+2. I would like to get a better understanding of all of the inventory that would come along with the business.
+ Please pull together a list of each inventory item you have stocked, including the store_id number, 
+ the inventory_id, the name of the film, the film’s rating, its rental rate and replacement cost.
+Ans:
+select i.Inventory_ID,i.Store_ID,f.title as Film_Name,f.Rating,f.Rental_Rate,f.Replacement_Cost from inventory i
+left join film f on i.film_id = f.film_id;
+
+3. From the same list of films you just pulled, please roll that data up and provide a summary 
+level overview of your inventory. We would like to know how many inventory items 
+you have with each rating at each store.
+Ans:
+select i.Store_ID,f.Rating,count(i.Inventory_ID) as Inventory_count from inventory i
+left join film f on i.film_id = f.film_id group by  i.Store_ID,f.Rating;
+
+4. Similarly, we want to understand how diversified the inventory is in terms of replacement cost. 
+We want to see how big of a hit it would be if a certain category of film became unpopular at a certain store.
+ We would like to see the number of films, as well as the average replacement cost, and total replacement
+cost, sliced by store and film category.
+Ans:
+select i.Store_ID,fc.Category_ID,count(f.film_id) as Film_count, 
+avg(replacement_cost) as Avg_Replacement_Cost, sum(replacement_cost) as Total_Replacement_Cost from inventory i
+ left join film_Category fc on i.film_id = fc.film_id 
+ left join film f on i.film_id = f.film_id  group by i.store_id,fc.category_id  order by  i.store_id,fc.category_id ;
+ 
+5. We want to make sure you folks have a good handle on who your customers are. 
+Please provide a list of all customer names, which store they go to, whether or not they are 
+currently active, and their full addresses — street address, city, and country.
+Ans:
+select c.Customer_ID,c.First_Name,c.Last_Name,c.Store_ID,c.Active,a.Address,i.City,o.Country from customer as c
+left join address a on c.address_id = a.address_id
+left join city i on a.city_id = i.city_id
+left join country o on i.country_id = o.country_id;
+
+6. ‘We would like to understand how much your customers are spending with you, and also 
+to know who your most valuable customers are. Please pull together a list of customer names, 
+their total lifetime rentals, and the sum of all payments you have collected from them. 
+It would be great to see this ordered on total lifetime value, with the most valuable customers at the top of the list.
+Ans:
+select c.Customer_ID,c.First_Name,c.Last_Name,count(p.rental_id) as Total_Rentals,sum(amount) as Total_Payment from customer c
+left join rental r on c.customer_id = r.customer_id 
+left join payment p on c.customer_id = p.customer_id 
+left join inventory i on r.inventory_id = i.inventory_id
+group by c.Customer_ID order by Total_Rentals desc ;
+
+7. My partner and I would like to get to know your board of advisors and any current investors. 
+Could you please provide a list of advisor and investor names in one table? Could you please note 
+whether they are an investor or an advisor, and for the investors, it would be good to include which company they work with.
+Ans:
+select advisor_id as Aggregator_id,first_name,last_name,"advisor" as Aggregator,"Empty" as Company_Name from advisor
+union
+select investor_id as Aggregator_id,first_name,last_name,"investor" as Aggregator,Company_Name from investor;
+
+8. We are interested in how well you have covered the most-awarded actors. Of all the actors with 
+three types of awards, for what % of them do we carry a film? And how about for actors with two types of awards?
+ Same questions. Finally, how about actors with just one award?
+ Ans:
+select actor_id,first_name,last_name,awards,count(*) * 100.0 / sum(count(*)) Over() as 'award_%',"Three" as Award_count
+FROM actor_award where awards ='Emmy, Oscar, Tony '  and   actor_id is not null GROUP BY actor_id
+Union   
+select actor_id,first_name,last_name,awards,count(*) * 100.0 / sum(count(*)) Over() as 'award_',"Two" as Award_count
+FROM actor_award where awards='Emmy, Oscar' or awards='Oscar, Tony' or awards='Emmy, Tony' and   actor_id is not null GROUP BY actor_id
+Union   
+select actor_id,first_name,last_name,awards,count(*) * 100.0 / sum(count(*)) Over() as 'award_',"one" as Award_count
+FROM actor_award where awards='Emmy' or awards='Oscar' or awards='Emmy' and   actor_id is not null GROUP BY actor_id; 
